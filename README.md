@@ -1,206 +1,169 @@
-# OpenStreetMap Route Planner
+# cpp-a-star-route-planner (C++ / OpenStreetMap / A*)
 
-This repo contains the starter code for the Route Planning project.
+A **route planner** in C++ that reads an **OpenStreetMap (.osm)** extract, converts the map into a **navigable graph**, and finds the best route using **A\***.  
+The result is rendered as an image (`map_routed.png`) with the computed path overlaid.
 
-When the project is completed and successfully ran, a route-overlayed map will be saved to ```build/map_routed.png```
+> **Portfolio focus:** this repo is organized to be **easy to run** (Docker), have a **clear README**, and highlight key technical decisions (graph modeling, A\* heuristic, rendering pipeline).
 
+---
 
-<img src="instruction_images/map_routed.png" width="50%" alt="Map showing the plotted route from 10, 10 to 90, 90"/>
+## Demo (clone → 1 command → run)
 
-_Start: 10, 10 - End: 90, 90_
+### Option A — Docker (recommended)
 
-## Compiling and Running the Project
-As you make changes to the source code, the build will **not** automatically update. To create updated executables, follow Steps 2 - 4. 
+```bash
+./scripts/build.sh
+./scripts/run.sh
+````
 
-## Getting Started
-This document contains instructions for how to run the project on your local machine. If you're using the Udacity-provided Workspace, these steps have already been completed.
+At the end, you should see:
 
-### 1. Install Dependencies
-> [!IMPORTANT]
-> You'll need need superuser/admin privileges on your machine to install the dependencies.
+* `./out/map_routed.png` (generated artifact)
 
-Install the following dependencies:
+> Tip: by default it runs with example coordinates (`--start 20 30 --end 50 40`).
+> You can pass other parameters:
+>
+> ```bash
+> ./scripts/run.sh --start 80 50 --end 20 10
+> ```
 
-* ```cmake >= 3.11.3```
-  * All OSes: [click here for installation instructions](https://cmake.org/install/)
-* ```make >= 4.1 (Linux, Mac), 3.81 (Windows)```
-  * Linux: make is installed by default on most Linux distros
-  * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
-  * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
-* ```gcc/g++ >= 7.4.0```
-  * Linux: gcc / g++ is installed by default on most Linux distros
-  * Mac: same instructions as make - [install Xcode command line tools](https://developer.apple.com/xcode/features/)
-  * Windows: recommend using [MinGW](http://www.mingw.org/)
-* ```IO2D```
-  * For ```Ubuntu >=22.04.5```, see below
-  * **For other operating systems, [see here](https://github.com/cpp-io2d/P0267_RefImpl/blob/master/BUILDING.md)**. If you have trouble installing, refer to these supplemental guides:
-    * [MacOS](https://github.com/mylescallan/OpenStreetMaps_C-/blob/master/README.md)
-    * [Ubuntu < 22.04.05](https://github.com/dbecad/CppND-Route-Planning-Project/blob/master/Ubuntu16.4_Install.md#compile-io2d)
-    * [Windows](https://knowledge.udacity.com/questions/42416)
-  * **Instructions for installing on ```Ubuntu >=22.04.5```**:
-```
-git clone --recurse-submodules https://github.com/cpp-io2d/P0267_RefImpl
-cd P0267_RefImpl
-mkdir Debug
-cmake -S .. -D CMAKE_BUILD_TYPE=Debug -DIO2D_WITHOUT_TESTS=1
-cmake --build .. --config Debug
-make
-sudo make install
+### Option B — docker compose (if you prefer)
+
+```bash
+docker compose up --build
 ```
 
-### 2. Compile
-> [!NOTE]  
-> Warning messages generated during this step can be ignored
+---
 
-Run the following commands from the root directory of the project (e.g., ```~/cpp-c1-Route-Planning-Project```). Two important executables will be created: ```test``` and ```OSM_A_star_search```. 
-```
-rm -rf build
-mkdir build
-cd build
-cmake ..
-make
-```
+## Expected output
 
-After successfully compiling, your file tree should look like this:
-```
-cpp-c1-Route-Planning-Project
-├── build/
-│   ├── bin/
-│   ├── CMakeFiles/
-│   ├── lib/
-│   ├── thirdparty/
-│   ├── CMakeCache.txt
-│   ├── cmake_install.cmake
-│   ├── Makefile
-│   ├── OSM_A_star_search
-│   └── test
-├── cmake/
-├── lib/
-├── src/
-├── test/
-├── thirdparty/
-├── .gitignore
-├── .gitmodules
-├── CMakeLists.txt
-├── map.osm
-├── map.png
-└── README.md
-```
+The final image is saved to `out/map_routed.png` (via Docker bind mount).
 
-### 3. Test
-> [!NOTE]
-> If you can't run the executable, grant it the correct privelges by running ```chmod +x test``` from the ```build``` directory.
+Example (already included in the repo):
 
-To ensure the program works as intentended, we need to first run unit tests. You can do this by running this command from the ```build``` directory:
-```
-./test
-```
+![Route example](instruction_images/map_routed.png)
 
-**Expected Results**
-* **Incomplete project:** `RoutePlannerTest.TestCalculateHValue` will fail, and all other tests will pass.
-<img alt="RoutePlannerTest.TestCalculateHValue unit test failing during an incomplete project"  src="instruction_images/test_partially_unsuccessful.png" width="50%" alt="Screenshot of terminal showing all tests ran successfully"/>
+---
 
-* **Successfully completed project:** All tests will pass, as shown in the screenshot below (your terminal may or may not show color - either is fine)
-<img alt="All unit tests passing after the project's been successfully completed."  src="instruction_images/test_successful.png" width="50%" alt="Screenshot of terminal showing all tests ran successfully"/>
+## How it works (architecture)
 
-#### Unit Tests Explained
-#### 1. TestCalculateHValue
-Tests the heuristic calculation function used in A* search.
+High-level pipeline:
 
-**Purpose**: Verifies accurate distance estimation to the goal node.
+1. **OSM parsing**: read the OpenStreetMap XML (`map.osm`) and extract nodes, ways, and relevant relations.
+2. **Graph construction**: connect adjacent nodes with edge costs based on distance.
+3. **A***: compute the shortest path between the start and end points.
+4. **Render**: draw the map (roads, water, buildings, etc.) + overlay the computed route.
+5. **PNG export**: generate `map_routed.png` (headless by default).
 
-**Test Cases**:
-- Start node: Expected h-value = 1.1329799
-- End node: Expected h-value = 0.0
-- Middle node: Expected h-value = 0.58903033
+---
 
-**Importance**: Accurate heuristic values are essential for A* to find optimal paths.
+## A* (the essentials)
 
-#### 2. TestAddNeighbors
-Tests the neighbor node expansion functionality. 
+* A* combines:
 
-**Purpose**: Verifies correct processing of neighboring nodes.
+  * **cost so far** to reach the current node (g)
+  * **heuristic** cost to reach the goal (h)
+* Here, the heuristic is the **Euclidean distance** (admissible), which helps reduce the search space while preserving optimality (for the chosen model).
+* Typical trade-offs:
 
-**Test Cases**:
-- Parent node assignments
-- G-values (actual cost from start): [0.10671431, 0.082997195, 0.051776856, 0.055291083]
-- H-values (heuristic values): [1.1828455, 1.0998145, 1.0858033, 1.1831238]
-- Visited status verification
+  * “stronger” heuristics → faster search, but must remain admissible
+  * very dense graphs → more memory/time; simplified graphs → may lose fidelity
 
-#### 3. TestConstructFinalPath
-Tests the path reconstruction from end to start.
+---
 
-**Purpose**: Ensures correct path assembly after finding the goal.
+## Tech stack
 
-**Test Cases**:
-- Path length verification (3 nodes)
-- Start node coordinate validation
-- End node coordinate validation
+* **C++17**
+* **CMake**
+* **OpenStreetMap** (`.osm` input)
+* **pugixml** (XML parsing — vendored in `thirdparty/`)
+* **googletest** (unit tests — vendored in `thirdparty/`)
+* **cpp-io2d (P0267 RefImpl)** for rendering (fetched automatically via `FetchContent`)
 
-#### 4. TestAStarSearch
-> [!NOTE]
-> Path size and distance values are specific to the provided map and start/end points.
+> Note: rendering depends on system libraries (e.g., Cairo). Docker takes care of these dependencies.
 
-Integration test for the complete A* search algorithm.
+---
 
-**Purpose**: Validates end-to-end pathfinding functionality.
+## Running with parameters
 
-**Test Cases**:
-- Path size verification (33 nodes for this specific map)
-- Start/end coordinate validation
-- Total path distance (873.41565 units for this specific map)
+The binary accepts:
 
-### 4. Run
-> [!NOTE]
-> If you can't run the executable, grant it the correct privelges by running ```chmod +x OSM_A_star_search``` from the ```build``` directory.
+* `-f <file.osm>`: path to the OSM file
+* `--out <file.png>`: output PNG path
+* `--start x y` and `--end x y` (0..100): normalized coordinates
+* `--show`: opens an interactive window (requires a graphical environment).
+  **By default, it runs headless and produces a PNG.**
 
-After all unit tests have successfully ran, you can now run the program. From the ```build``` directory, run this command:
-```
-./OSM_A_star_search
+Example using the Docker script:
+
+```bash
+./scripts/run.sh -f /app/map.osm --out /out/map_routed.png --start 5 10 --end 80 90
 ```
 
-By default, the program uses the ```map.osm``` map file. To specify a different map file, run:
+---
+
+## Native build (without Docker) — optional
+
+> If you want to compile on your host, you’ll need build dependencies (CMake, a compiler, Cairo and related libs).
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+./build/OSM_A_star_search -f map.osm --out map_routed.png --start 20 30 --end 50 40
 ```
-./OSM_A_star_search -f ../<your_osm_file.osm>
+
+---
+
+## Tests
+
+```bash
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build
 ```
 
-If the program successfully executes, you'll see an output of: 
-* The calculated distance
-* A message that ```build/map_routed.png``` has been updated
+---
 
-<img src="instruction_images/osm_search_successful.png" width="50%" alt="Screenshot showing successful output from running ./OSM_A_star_search"/>
+## What I learned / technical decisions (short and honest)
 
+* How to **model a real-world map (OSM)** as a graph while keeping search cost under control.
+* How to apply **A*** with a consistent heuristic and evaluate its impact on search time.
+* How to make a C++ project **portfolio-ready**: reproducible dependencies (Docker), copy/paste commands, and value-focused documentation.
+* How to separate responsibilities: **model (OSM/graph)**, **planner (A*)**, and **rendering**.
 
-> [!IMPORTANT]
-> When your code is completed, each execution of ```./OSM_A_star_search``` will update the file ```map_routed.png```. Until you update your code, the program will say it's updated the map but that won't have actually happened.
+---
 
+## Troubleshooting
 
-## Project Instructions
+### 1) `std::system_error: Input/output error` when running
 
-_Instructions are listed in the Udacity course._
+This usually happens when the program tries to open a window in a headless environment (VM, CI, WSL, Udacity workspace).
+**Fix:** use headless mode (default) and **don’t** pass `--show`.
 
-## Built With
-* This code is based on [this map rendering example](https://github.com/cpp-io2d/P0267_RefImpl/tree/master/P0267_RefImpl/Samples/maps) from the IO2D implementation GitHub repo
+### 2) Build fails due to missing graphics libraries on the host
 
-### Core Dependencies
-* [CMake](https://cmake.org/) (>= 3.11.3) - Cross-platform build system generator
-* [gcc/g++](https://gcc.gnu.org/) (>= 7.4.0) - C/C++ compiler collection
-* [make](https://www.gnu.org/software/make/) (>= 4.1 Linux/Mac, >= 3.81 Windows) - Build automation tool
+Use Docker (`./scripts/build.sh`) — it installs dependencies and builds inside the container.
 
-### Libraries
-* [IO2D](https://github.com/cpp-io2d/P0267_RefImpl) - 2D graphics library used for rendering the map and route
-* [Cairo](https://www.cairographics.org/)- Graphics library providing the backend for IO2D
-* [GraphicsMagick](http://www.graphicsmagick.org/) - Image processing library used for map manipulation
-* [pugixml](https://pugixml.org/) (included in thirdparty/) - XML parser used for reading OpenStreetMap data
-* [Google Test](https://github.com/google/googletest) (included in thirdparty/) - C++ testing framework for unit tests
+### 3) “.osm file not found”
 
-### Development Files
-* [libcairo2-dev](https://packages.debian.org/sid/libcairo2-dev) - Development files for Cairo graphics library
-* [libgraphicsmagick1-dev](https://packages.debian.org/sid/libgraphicsmagick1-dev) - Development files for GraphicsMagick
-* [libpng-dev](https://packages.debian.org/sid/libpng-dev) - PNG file format library for image handling
-* [libxkbcommon-dev](https://packages.debian.org/sid/libxkbcommon-dev) - Keyboard handling library required by IO2D
+Make sure you are pointing to a valid path with `-f`. In Docker, the example file is at `/app/map.osm`.
 
+### 4) PNG not appearing on the host
+
+The file is written to the mounted `./out` directory. Check `out/map_routed.png` after running the container.
+
+---
+
+## Repository structure
+
+* `src/` — model, planner, and rendering implementation
+* `test/` — unit tests (GoogleTest)
+* `thirdparty/` — vendored dependencies (pugixml, googletest)
+* `instruction_images/` — images used by the README
+* `map.osm`, `map.png` — sample files for quick runs
+
+---
 
 ## License
 
-[License](LICENSE)
+See [`LICENSE`](LICENSE).

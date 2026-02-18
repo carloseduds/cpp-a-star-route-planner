@@ -1,0 +1,7 @@
+services:
+  app:
+    build: .
+    image: cpp-a-star-route-planner
+    volumes:
+      - ./out:/out
+    command: ["-f", "/app/map.osm", "--out", "/out/map_routed.png", "--start", "20", "30", "--end", "50", "40"]
